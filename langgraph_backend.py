@@ -18,7 +18,7 @@ class ChatState(TypedDict):
 def chat_node(state: ChatState):
     messages = state['messages']
     response = llm.invoke(messages)
-    return {'messgaes', [response]}
+    return {'messages' : [response]}
 
 # Checkpointer
 checkpointer = InMemorySaver()
