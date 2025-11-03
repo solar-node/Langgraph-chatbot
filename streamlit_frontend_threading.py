@@ -17,8 +17,19 @@ def generate_thread_id():
 def reset_chat():
     thread_id = generate_thread_id()
     st.session_state['thread_id'] = thread_id
+    add_thread(st.session_state['thread_id'], title="New Chat")
     st.session_state['message_history'] = []
+ 
+def add_thread(thread_id, title="New Chat"):
+    if 'chat_threads' not in st.session_state:
+        st.session_state['chat_threads'] = []
+    if not any(t['id'] == thread_id for t in st.session_state['chat_threads']):
+        st.session_state['chat_threads'].append({'id': thread_id, 'title': title})
 
+# Takes thread_id and returns the list of the messages 
+def load_conversation(thread_id):
+    state = chatbot.get_state(config={'configurable': {'thread_id': thread_id}}).values
+    return state['messages'] if 'messages' in state else []
 # ******************* Session Setup ********************************
 
 if 'message_history' not in st.session_state:
@@ -31,17 +42,32 @@ if 'thread_id' not in st.session_state: # Iska matlab hmara thread_id set nhi hu
 if 'chat_threads' not in st.session_state:
     st.session_state['chat_threads'] = []
 
-
+add_thread(st.session_state['thread_id'], title="New Chat")
 # ****************** SIDEBAR UI *****************************
 
 st.sidebar.title('Langgraph Chatbot')
 
-if st.sidebar.button('New Chat'):
+if st.sidebar.button('Start Conversation'):
     reset_chat()
 
-st.sidebar.header('My Conversations')
+st.sidebar.header('Recent')
 
-st.sidebar.text(st.session_state['thread_id'])
+for chat in st.session_state['chat_threads'][::-1]:
+    if st.sidebar.button(chat['title'], key=chat['id']):
+        st.session_state['thread_id'] = chat['id']
+        messages = load_conversation(chat['id'])
+     
+        temp_messages = []
+
+        for msg in messages:
+            if isinstance(msg, HumanMessage):  # If current message ka instance is HumanMessage
+                role = 'user'
+            else:
+                role = 'assistant'
+            temp_messages.append({'role' : role, 'content' : msg.content})
+
+        st.session_state['message_history'] = temp_messages
+            
 
 # ***************** MAIN UI ***********************************
 
@@ -56,6 +82,12 @@ for message in st.session_state['message_history'] :
 user_input = st.chat_input('Type here')
 
 if user_input:
+
+    # Update chat title with first user message
+    for t in st.session_state['chat_threads']:
+        if t['id'] == st.session_state['thread_id'] and t['title'] == "New Chat":
+            preview = user_input[:30] + ("..." if len(user_input) > 30 else "")
+            t['title'] = preview
 
     # First add the message to message_history
     st.session_state['message_history'].append({'role': 'user', 'content' : user_input})
@@ -78,9 +110,7 @@ if user_input:
                 stream_mode= 'messages'
                 )
             )
-    
+        
+
     # Store in session
     st.session_state['message_history'].append({'role': 'assistant', 'content' : ai_message})
-
-
-    
