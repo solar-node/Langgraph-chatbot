@@ -6,7 +6,6 @@ from langgraph_backend import chatbot
 # Can generate new thread id each time it is called
 import uuid
 
-
 # ********************* Utility functions ************************
 
 def generate_thread_id():
@@ -73,9 +72,10 @@ for chat in st.session_state['chat_threads'][::-1]:
 
 # Loading the conversation history
 for message in st.session_state['message_history'] :
-    with st.chat_message(message['role']):
+    # Use "👤" for user and "🤖" for assistant
+    avatar = "👤" if message['role'] == 'user' else "🤖"
+    with st.chat_message(message['role'], avatar=avatar):
         st.text(message['content'])
-
 # {'role' : 'user', 'content' : 'Hii'}
 # {'role' : 'assistant', 'content' : 'Hello'}
 

@@ -7,6 +7,12 @@ from langgraph_backend_database import chatbot, retrieve_all_threads
 import uuid
 
 
+st.set_page_config(
+    page_title="Langgraph Chatbot",
+    page_icon="🤖",  
+    layout="wide"    
+)
+
 # ********************* Utility functions ************************
 
 def generate_thread_id():
@@ -48,10 +54,11 @@ add_thread(st.session_state['thread_id'], title="New Chat")
 
 st.sidebar.title('Langgraph Chatbot')
 
-if st.sidebar.button('Start Conversation'):
+# Use an icon and set use_container_width=True
+if st.sidebar.button('➕ New Chat', use_container_width=True):
     reset_chat()
 
-st.sidebar.header('Recent')
+st.sidebar.header("Recent", divider="rainbow")
 
 for chat in st.session_state['chat_threads'][::-1]:
     if st.sidebar.button(chat['title'], key=chat['id']):
@@ -72,11 +79,15 @@ for chat in st.session_state['chat_threads'][::-1]:
 
 # ***************** MAIN UI ***********************************
 
+# Add a title and welcome message if the chat is empty
+if not st.session_state['message_history']:
+    st.title("🤖 Langgraph Chatbot")
+    st.info("Type a message in the box below to start our conversation!")
+
 # Loading the conversation history
 for message in st.session_state['message_history'] :
     with st.chat_message(message['role']):
         st.text(message['content'])
-
 # {'role' : 'user', 'content' : 'Hii'}
 # {'role' : 'assistant', 'content' : 'Hello'}
 
