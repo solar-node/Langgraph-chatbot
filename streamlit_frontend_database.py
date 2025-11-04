@@ -2,7 +2,7 @@ import streamlit as st
 from langchain_core.messages import HumanMessage
 # Importing chatbot object from langgraph_backend.py
 from langgraph_backend_database import chatbot, retrieve_all_threads
-
+import sqlite3
 # Can generate new thread id each time it is called
 import uuid
 
@@ -36,6 +36,41 @@ def add_thread(thread_id, title="New Chat"):
 def load_conversation(thread_id):
     state = chatbot.get_state(config={'configurable': {'thread_id': thread_id}}).values
     return state['messages'] if 'messages' in state else []
+
+
+import os
+
+def clear_database():
+    db_path = "chatbot.db"
+    if os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+
+            # Check if tables exist before deleting
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = [t[0] for t in cursor.fetchall()]
+
+            if "checkpoints" in tables:
+                cursor.execute("DELETE FROM checkpoints;")
+            if "checkpoint_blobs" in tables:
+                cursor.execute("DELETE FROM checkpoint_blobs;")
+
+            conn.commit()
+            conn.close()
+
+            # Reset session state
+            st.session_state['chat_threads'] = []
+            st.session_state['message_history'] = []
+            st.session_state['thread_id'] = generate_thread_id()
+
+            st.success("✅ Database cleared successfully! All chats removed.")
+        except Exception as e:
+            st.error(f"⚠️ Error clearing database: {e}")
+    else:
+        st.warning("No database file found to clear.")
+
+
 # ******************* Session Setup ********************************
 
 if 'message_history' not in st.session_state:
@@ -75,7 +110,13 @@ for chat in st.session_state['chat_threads'][::-1]:
             temp_messages.append({'role' : role, 'content' : msg.content})
 
         st.session_state['message_history'] = temp_messages
-            
+
+# Sidebar footer for Clear Database
+st.sidebar.markdown("---")
+st.sidebar.caption("Maintenance")
+if st.sidebar.button("🗑️ Clear Database", use_container_width=True):
+    clear_database()
+
 
 # ***************** MAIN UI ***********************************
 
