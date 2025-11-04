@@ -126,9 +126,9 @@ if not st.session_state['message_history']:
     st.info("Type a message in the box below to start our conversation!")
 
 # Loading the conversation history
-for message in st.session_state['message_history'] :
+for message in st.session_state['message_history']:
     with st.chat_message(message['role']):
-        st.text(message['content'])
+        st.markdown(message['content'])
 # {'role' : 'user', 'content' : 'Hii'}
 # {'role' : 'assistant', 'content' : 'Hello'}
 
@@ -156,14 +156,18 @@ if user_input:
 
     # Now we will do stream messages not invoke
     with st.chat_message('assistant'):
-        ai_message = st.write_stream(
-            message_chunk.content for message_chunk, metadata in chatbot.stream(
-                {'messages' : [HumanMessage(content=user_input)]},
-                config = CONFIG,
-                stream_mode= 'messages'
-                )
-            )
-        
+        response_container = st.empty()
+        full_response = ""
+
+        for message_chunk, metadata in chatbot.stream(
+            {'messages': [HumanMessage(content=user_input)]},
+            config=CONFIG,
+            stream_mode='messages'
+        ):
+            full_response += message_chunk.content
+            response_container.markdown(full_response)
+
+        ai_message = full_response
 
     # Store in session
     st.session_state['message_history'].append({'role': 'assistant', 'content' : ai_message})
