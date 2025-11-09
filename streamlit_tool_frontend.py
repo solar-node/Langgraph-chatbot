@@ -1,5 +1,5 @@
 import streamlit as st
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 # Importing chatbot object from langgraph_backend.py
 from langgraph_tool_backend import chatbot, retrieve_all_threads
 import sqlite3
@@ -94,21 +94,39 @@ if st.sidebar.button('➕ New Chat', use_container_width=True):
     reset_chat()
 
 st.sidebar.header("Recent", divider="rainbow")
+## Buggy code when added tools:
+# for chat in st.session_state['chat_threads'][::-1]:
+#     if st.sidebar.button(chat['title'], key=chat['id']):
+#         st.session_state['thread_id'] = chat['id']
+#         messages = load_conversation(chat['id'])
+     
+#         temp_messages = []
 
+#         for msg in messages:
+#             if isinstance(msg, HumanMessage):  # If current message ka instance is HumanMessage
+#                 role = 'user'
+#             else:
+#                 role = 'assistant'
+#             temp_messages.append({'role' : role, 'content' : msg.content})
+
+#         st.session_state['message_history'] = temp_messages
+
+
+# Corrected code:
 for chat in st.session_state['chat_threads'][::-1]:
     if st.sidebar.button(chat['title'], key=chat['id']):
         st.session_state['thread_id'] = chat['id']
         messages = load_conversation(chat['id'])
      
+        # In streamlit_frontend_database.py
         temp_messages = []
-
         for msg in messages:
-            if isinstance(msg, HumanMessage):  # If current message ka instance is HumanMessage
-                role = 'user'
-            else:
-                role = 'assistant'
-            temp_messages.append({'role' : role, 'content' : msg.content})
-
+            if isinstance(msg, HumanMessage):
+                temp_messages.append({'role': 'user', 'content': msg.content})
+            elif isinstance(msg, AIMessage):
+                # ADD THIS CHECK: Only add the message if it has visible content
+                if msg.content.strip(): 
+                    temp_messages.append({'role': 'assistant', 'content': msg.content})
         st.session_state['message_history'] = temp_messages
 
 # Sidebar footer for Clear Database
@@ -163,19 +181,37 @@ if user_input:
     # st.session_state['message_history'].append({'role': 'assistant', 'content' : ai_message})
 
     # Now we will do stream messages not invoke
-    with st.chat_message('assistant'):
-        response_container = st.empty()
-        full_response = ""
+    ## Streaming all the messages
 
-        for message_chunk, metadata in chatbot.stream(
-            {'messages': [HumanMessage(content=user_input)]},
-            config=CONFIG,
-            stream_mode='messages'
-        ):
-            full_response += message_chunk.content
-            response_container.markdown(full_response)
+    # with st.chat_message('assistant'):
+        # response_container = st.empty()
+        # full_response = ""
 
-        ai_message = full_response
+        # for message_chunk, metadata in chatbot.stream(
+        #     {'messages': [HumanMessage(content=user_input)]},
+        #     config=CONFIG,
+        #     stream_mode='messages'
+        # ):
+        #     full_response += message_chunk.content
+        #     response_container.markdown(full_response)
+
+        # ai_message = full_response
+
+        ## Streaming AIMessages only
+    with st.chat_message("assistant"):
+        def ai_only_stream():
+            for message_chunk, metadata in chatbot.stream(
+                {'messages': [HumanMessage(content=user_input)]},
+                config=CONFIG,
+                stream_mode="messages"
+            ):
+                if isinstance(message_chunk, AIMessage):
+                    # Yield only assistant tokens
+                    yield message_chunk.content
+
+        ai_message = st.write_stream(ai_only_stream())
+
+
 
     # Store in session
     st.session_state['message_history'].append({'role': 'assistant', 'content' : ai_message})
