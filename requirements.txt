@@ -11,3 +11,4 @@ langgraph-checkpoint-sqlite
 SQLAlchemy
 pandas
 numpy
+ddgs
